@@ -1,0 +1,54 @@
+#!/bin/bash
+
+#sudo apt-get install doxygen
+#sudo pip install -U scikit-image
+#sudo pip install numpy==1.11.0
+#sudo apt-get install libprotobuf-dev libleveldb-dev libsnappy-dev libopencv-dev libhdf5-serial-dev protobuf-compiler
+#sudo apt-get install --no-install-recommends libboost-all-dev
+#sudo apt-get install libgflags-dev libgoogle-glog-dev liblmdb-dev
+#sudo apt-get install python-scipy python-matplotlib ipython ipython-notebook python-pandas python-sympy python-nose
+#sudo pip install cycler protobuf easydict functools32 pyyaml
+#sudo apt-get install python-opencv
+
+build_type="${1}"
+if [ -z ${build_type} ]; then
+    build_type="gpu"
+fi
+
+install_dir="${2}"
+if [ -z "${install_dir}" ]; then
+    install_dir="$(pwd)/release-${build_type}/"
+fi
+
+echo "type : ${build_type}"
+echo "install_dir : ${install_dir}"
+echo "is that correct?[y|n]"
+read input
+if [ "${input}" == "n" ]; then
+    exit 0
+fi
+
+if [ -d build ]; then
+    rm -rf build
+fi
+mkdir -p build
+
+cd build
+
+if [ "${build_type}" == "gpu" ]; then
+    cmake -DCUDA_USE_STATIC_CUDA_RUNTIME=OFF -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=${install_dir} ..
+else
+    cmake -DCUDA_USE_STATIC_CUDA_RUNTIME=OFF -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=${install_dir} -DCPU_ONLY=ON ..
+fi
+
+if [ $? != 0 ]; then
+    exit 1
+fi
+
+make install -j 8
+if [ $? != 0 ]; then
+    exit 1
+fi
+
+cd ..
+
