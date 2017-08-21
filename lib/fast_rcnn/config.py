@@ -82,7 +82,7 @@ __C.TRAIN.SNAPSHOT_INFIX = ''
 
 # Use a prefetch thread in roi_data_layer.layer
 # So far I haven't found this useful; likely more engineering work is required
-__C.TRAIN.USE_PREFETCH = False
+__C.TRAIN.USE_PREFETCH = True
 
 # Normalize the targets (subtract empirical mean, divide by empirical stddev)
 __C.TRAIN.BBOX_NORMALIZE_TARGETS = True

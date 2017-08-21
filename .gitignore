@@ -1,0 +1,6 @@
+output/
+*.pyc
+*.so
+caffe-fast-rcnn/build/
+caffe-fast-rcnn/release-gpu/
+data/renren1

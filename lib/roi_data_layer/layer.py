@@ -17,6 +17,17 @@ import numpy as np
 import yaml
 from multiprocessing import Process, Queue
 
+def get_size_str( w, h):
+    size_min = min(w, h)
+    size_max = max(w, h)
+    im_scale = float(cfg.TRAIN.SCALES[0]) / float(size_min)
+    
+    if round(im_scale * size_max) > cfg.TRAIN.MAX_SIZE:
+        im_scale = float(cfg.TRAIN.MAX_SIZE) / float(size_max)
+    im_x = int(round(w * im_scale / cfg.TRAIN.SCALE_MULTIPLE_OF) * cfg.TRAIN.SCALE_MULTIPLE_OF)
+    im_y = int(round(h * im_scale / cfg.TRAIN.SCALE_MULTIPLE_OF) * cfg.TRAIN.SCALE_MULTIPLE_OF)
+    return "{}x{}".format(im_x, im_y)
+
 class RoIDataLayer(caffe.Layer):
     """Fast R-CNN data layer used for training."""
 
@@ -44,7 +55,7 @@ class RoIDataLayer(caffe.Layer):
                     rd = self._roidb[i]
                     w = rd['width']
                     h = rd['height']
-                    key = self._get_size_str(w, h)
+                    key = get_size_str(w, h)
                     if self._groups.has_key(key):
                         self._groups[key].append(i)
                     else:
@@ -64,17 +75,6 @@ class RoIDataLayer(caffe.Layer):
         else:
             self._perm = np.random.permutation(np.arange(len(self._roidb)))
         self._cur = 0
-
-    def _get_size_str(self, w, h):
-        size_min = min(w, h)
-        size_max = max(w, h)
-        im_scale = float(cfg.TRAIN.SCALES[0]) / float(size_min)
-
-        if round(im_scale * size_max) > cfg.TRAIN.MAX_SIZE:
-            im_scale = float(cfg.TRAIN.MAX_SIZE) / float(size_max)
-        im_x = int(round(w * im_scale / cfg.TRAIN.SCALE_MULTIPLE_OF) * cfg.TRAIN.SCALE_MULTIPLE_OF)
-        im_y = int(round(h * im_scale / cfg.TRAIN.SCALE_MULTIPLE_OF) * cfg.TRAIN.SCALE_MULTIPLE_OF)
-        return "{}x{}".format(im_x, im_y)
 
     def _get_next_minibatch_inds(self):
         """Return the roidb indices for the next minibatch."""
@@ -223,25 +223,61 @@ class BlobFetcher(Process):
         self._num_classes = num_classes
         self._perm = None
         self._cur = 0
+        self._groups = None
         self._shuffle_roidb_inds()
         # fix the random seed for reproducibility
         np.random.seed(cfg.RNG_SEED)
 
     def _shuffle_roidb_inds(self):
         """Randomly permute the training roidb."""
-        # TODO(rbg): remove duplicated code
-        self._perm = np.random.permutation(np.arange(len(self._roidb)))
+        if cfg.TRAIN.ASPECT_GROUPING:
+            if self._groups is None:
+                self._groups = {}
+                for i in xrange(len(self._roidb)):
+                    rd = self._roidb[i]
+                    w = rd['width']
+                    h = rd['height']
+                    key = get_size_str(w, h)
+                    if self._groups.has_key(key):
+                        self._groups[key].append(i)
+                    else:
+                        self._groups[key] = [i]
+
+                for (key, value) in self._groups.items():
+                    if len(value) < 2048:
+                        print "ratio:{} has {} images, remove all images".format(key, len(value) / 2)
+                        self._groups.pop(key)
+
+            self._group_used = {}
+            for (key, value) in self._groups.items():
+                self._group_used[key] = 0
+                self._groups[key] = np.random.permutation(value)
+                print "ratio:{} has {} images".format(key, len(value) / 2)
+
+        else:
+            self._perm = np.random.permutation(np.arange(len(self._roidb)))
         self._cur = 0
+
 
     def _get_next_minibatch_inds(self):
         """Return the roidb indices for the next minibatch."""
-        # TODO(rbg): remove duplicated code
-        if self._cur + cfg.TRAIN.IMS_PER_BATCH >= len(self._roidb):
-            self._shuffle_roidb_inds()
+        min_key = None
+        min_ratio = 1.0
+        for (key, value) in self._groups.items():
+            left_ratio = float(self._group_used[key]) / float(len(value))
+            if left_ratio < min_ratio:
+                min_key = key
+                min_ratio = left_ratio
 
-        db_inds = self._perm[self._cur:self._cur + cfg.TRAIN.IMS_PER_BATCH]
-        self._cur += cfg.TRAIN.IMS_PER_BATCH
+        if min_key is None or self._group_used[min_key] + cfg.TRAIN.IMS_PER_BATCH > len(self._groups[min_key]):
+            self._shuffle_roidb_inds()
+            min_key = self._groups.keys()[0]
+
+        index = self._group_used[min_key]
+        db_inds = self._groups[min_key][index:index + cfg.TRAIN.IMS_PER_BATCH]
+        self._group_used[min_key] = index + cfg.TRAIN.IMS_PER_BATCH
         return db_inds
+
 
     def run(self):
         print 'BlobFetcher started'
