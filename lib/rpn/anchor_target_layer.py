@@ -141,7 +141,7 @@ class AnchorTargetLayer(caffe.Layer):
             # overlaps between the anchors and the gt boxes
             # overlaps (ex, gt)
 
-            gt_count = im_info_all[img_index, 2]
+            gt_count = int(round(im_info_all[img_index, 2]))
             gt_boxes = gt_boxes_all[img_index, :gt_count]
             labels = np.copy(labels_orig)
 

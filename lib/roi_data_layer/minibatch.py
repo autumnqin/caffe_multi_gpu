@@ -62,7 +62,7 @@ def get_minibatch(roidb, num_classes):
         gt_boxes = np.empty((num_images, gt_count_max, 5), dtype=np.float32)
         for i in xrange(num_images):
             gt = gt_boxes_all[i]
-            gt_count = blobs['im_info'][i, 2]
+            gt_count = int(round(blobs['im_info'][i, 2]))
             gt_boxes[i, 0:gt_count, :] = gt
         blobs['gt_boxes'] = gt_boxes
 
