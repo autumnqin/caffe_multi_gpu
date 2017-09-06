@@ -208,10 +208,10 @@ class renren(imdb):
         for ix, obj in enumerate(objs):
             bbox = obj.find('bndbox')
             # Make pixel indexes 0-based
-            x1 = int(float(bbox.find('xmin').text) * w)
-            y1 = int(float(bbox.find('ymin').text) * h)
-            x2 = int(float(bbox.find('xmax').text) * w)
-            y2 = int(float(bbox.find('ymax').text) * h)
+            x1 = min(int(float(bbox.find('xmin').text) * w), w - 1)
+            y1 = min(int(float(bbox.find('ymin').text) * h), h - 1)
+            x2 = min(int(float(bbox.find('xmax').text) * w), w - 1)
+            y2 = min(int(float(bbox.find('ymax').text) * h), h - 1)
             cls = self._class_to_ind[obj.find('name').text.lower().strip()]
             if x2 - x1 <= 0 or y2 - y1 <= 0:
                 print "{} x:{},{};  y:{},{}".format(index, x1, x2, y1, y2)
