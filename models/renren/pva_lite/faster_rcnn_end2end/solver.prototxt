@@ -2,7 +2,7 @@ train_net: "models/renren/pva_lite/faster_rcnn_end2end/train_no_pretrain.prototx
 base_lr: 0.01
 lr_policy: "step"
 gamma: 0.33
-stepsize: 200000
+stepsize: 326628
 display: 20
 average_loss: 100
 # iter_size: 1

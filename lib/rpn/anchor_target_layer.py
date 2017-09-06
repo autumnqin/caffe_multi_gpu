@@ -183,8 +183,8 @@ class AnchorTargetLayer(caffe.Layer):
             # subsample negative labels if we have too many
             nnn_bg = 0
             num_bg = cfg.TRAIN.RPN_BATCHSIZE - np.sum(labels == 1)
-            if num_bg > nnn_fg:
-                num_bg = nnn_fg
+            # if num_bg > nnn_fg:
+            #     num_bg = nnn_fg
             bg_inds = np.where(labels == 0)[0]
             nnn_bg = len(bg_inds)
             if len(bg_inds) > num_bg:
