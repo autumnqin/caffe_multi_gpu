@@ -18,6 +18,7 @@ import subprocess
 import uuid
 from voc_eval import voc_eval
 from fast_rcnn.config import cfg
+import PIL
 
 class renren(imdb):
     def __init__(self, image_set, index, devkit_path=None):
@@ -178,7 +179,12 @@ class renren(imdb):
         Load image and bounding boxes info from XML file in the PASCAL VOC
         format.
         """
-        filename = os.path.join(self._data_path, 'Annotations', index + '.xml')
+        filename = os.path.join(self._data_path, 'Annotations', index)
+        imgname = os.path.join(self._data_path, 'JPEGImages', index)
+        size = PIL.Image.open(imgname).size
+        w = size[0]
+        h = size[1]
+
         tree = ET.parse(filename)
         objs = tree.findall('object')
         if not self.config['use_diff']:
@@ -202,10 +208,10 @@ class renren(imdb):
         for ix, obj in enumerate(objs):
             bbox = obj.find('bndbox')
             # Make pixel indexes 0-based
-            x1 = int(float(bbox.find('xmin').text))
-            y1 = int(float(bbox.find('ymin').text))
-            x2 = int(float(bbox.find('xmax').text))
-            y2 = int(float(bbox.find('ymax').text))
+            x1 = int(float(bbox.find('xmin').text) * w)
+            y1 = int(float(bbox.find('ymin').text) * h)
+            x2 = int(float(bbox.find('xmax').text) * w)
+            y2 = int(float(bbox.find('ymax').text) * h)
             cls = self._class_to_ind[obj.find('name').text.lower().strip()]
             if x2 - x1 <= 0 or y2 - y1 <= 0:
                 print "{} x:{},{};  y:{},{}".format(index, x1, x2, y1, y2)
